@@ -1,0 +1,119 @@
+C51 COMPILER V8.05a   SWBF                                                                 05/10/2012 15:17:33 PAGE 1   
+
+
+C51 COMPILER V8.05a, COMPILATION OF MODULE SWBF
+OBJECT MODULE PLACED IN swbf.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE swbf.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include<reg51.h>
+   2          #include "INTRINS.H"
+   3          #include"timer.h"
+   4          #include"DS18b20.h"
+   5          main()
+   6          {   TMOD=0x11;//定时器初始化
+   7   1              TH0=0xfe;
+   8   1              TL0=0x70;
+   9   1          TH1=0xfc;
+  10   1              TL1=0x18;
+  11   1              ET0=1;
+  12   1              ET1=1;
+  13   1              TR0=1;
+  14   1              TR1=1;
+  15   1          EA=1;
+  16   1              AM=0;//确保闹铃有效
+  17   1              AMN=0;//
+  18   1      while(1)
+  19   1         {     
+  20   2                 if(x==0)     
+  21   2                    {
+  22   3                                 TempH=temp>>4;//右移四位
+  23   3                             ih=(TempH%100)/10; //十位温度
+  24   3                     il=(TempH%100)%10; //个位温度
+  25   3                                }
+  26   2         }              
+  27   1      }
+  28             
+  29          
+  30          
+  31          void timer0(void) interrupt 1 using 0 //定时器0中断200微妙扫描一次
+  32          {       
+  33   1          TH0=0xfe;
+  34   1              TL0=0x70;
+  35   1              display();
+  36   1          x++;
+  37   1          if(x==5000)x=0,l++,e+=8;//沙漏每秒下落一行，温度每秒扫描一次
+  38   1          if(e>24)e=0;//沙漏复位
+  39   1          if(l==60)l=0,h++;//分加  
+  40   1          display();//扫描屏
+  41   1              if(l==10)temp=ReadTemperature();//一秒读取一次温度
+  42   1              display();               
+  43   1      }  
+  44          
+  45          
+  46          void timer1(void) interrupt 3 using 1 //定时器1中断500微妙扫描一次
+  47          { 
+  48   1         TH1=0xfc;
+  49   1         TL1=0x18;
+  50   1         if(CS==0)  //如果检测到低电平，说明按键按下
+  51   1          {
+  52   2               delay500us(); //延时去抖
+  53   2           if(!CS)     //再次确认按键是否按下，没有按下则退出
+  54   2                 {
+  55   3              while(!CS);//如果确认按下按键等待按键释放，没有释放则一直等待
+C51 COMPILER V8.05a   SWBF                                                                 05/10/2012 15:17:33 PAGE 2   
+
+  56   3                     {
+  57   4                       if(w==0)d++;
+  58   4                               else n++;
+  59   4                              }
+  60   3                 }
+  61   2              }
+  62   1         
+  63   1        
+  64   1         if(CF==0)
+  65   1              {
+  66   2               delay500us(); //延时去抖
+  67   2           if(!CF)     //再次确认按键是否按下，没有按下则退出
+  68   2                 {
+  69   3              while(!CF);//如果确认按下按键等待按键释放，没有释放则一直等待
+  70   3                     {
+  71   4                       if(w==0)h++;
+  72   4                               else p++;
+  73   4                              }
+  74   3                 }
+  75   2              }
+  76   1      
+  77   1         if((m==c)&&(n==d)&&(o==f)&&(p==h)&&(v==g)&&(l==0)){AM=1,delay(),AM=0;}//闹铃开始控制
+  78   1         if((m==c)&&(n==d)&&(o==f)&&(p==h)&&(v==g)&&(l==59)){AMN=1,delay(),AMN=0;}//闹铃关闭控制   
+  79   1         
+  80   1         if(SW==0)  //如果检测到低电平，说明按键按下
+  81   1          {
+  82   2               delay500us(); //延时去抖
+  83   2           if(!SW)     //再次确认按键是否按下，没有按下则退出
+  84   2                 {
+  85   3              while(!SW);//如果确认按下按键等待按键释放，没有释放则一直等待
+  86   3                     {
+  87   4                       w=~w;
+  88   4                              }
+  89   3                 }
+  90   2              }
+  91   1      
+  92   1              
+  93   1      }  
+  94          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1478    ----
+   CONSTANT SIZE    =    101    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     32    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

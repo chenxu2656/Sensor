@@ -1,0 +1,5 @@
+VERSION:3 SOURCE_TIMESTAMP:4458B50C
+NODE:I LEVEL:0 LINE:1 "K:\工作室\模块设计\声音模块\projcet file\source\AD采样\myfun.h"
+NODE:I LEVEL:0 LINE:2 "c:\cvavr2\inc\string.h"
+NODE:F LEVEL:0 LINE:13 "u32tostr(unsigned long dat,unsigned char * str)"
+NODE:F LEVEL:0 LINE:41 "strtou32(unsigned char * str)"

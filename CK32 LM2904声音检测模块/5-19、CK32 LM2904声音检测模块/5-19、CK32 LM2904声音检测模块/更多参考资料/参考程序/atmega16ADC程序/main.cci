@@ -1,0 +1,10 @@
+VERSION:3 SOURCE_TIMESTAMP:445C5657
+NODE:I LEVEL:0 LINE:12 "C:\cvavr2\inc\mega16.h"
+NODE:I LEVEL:0 LINE:13 "C:\cvavr2\inc\delay.h"
+NODE:I LEVEL:0 LINE:14 "I:\工作室\模块设计\声音模块\projcet file\source\AD采样\uart.h"
+NODE:V LEVEL:0 LINE:16 "time_2ms_ok -> R2.0"
+NODE:V LEVEL:0 LINE:17 "adc_data -> R4,R5"
+NODE:V LEVEL:0 LINE:17 "adc_v -> R6,R7"
+NODE:F LEVEL:0 LINE:18 "main(void)"
+NODE:F LEVEL:0 LINE:46 "adc_isr(void)"
+NODE:F LEVEL:0 LINE:53 "timer0_comp_isr(void)"

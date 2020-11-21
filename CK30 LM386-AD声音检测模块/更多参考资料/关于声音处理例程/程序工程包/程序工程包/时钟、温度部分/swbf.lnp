@@ -1,0 +1,4 @@
+"STARTUP.obj",
+"swbf.obj" 
+TO "swbf" 
+RAMSIZE(256) 

@@ -1,0 +1,540 @@
+C51 COMPILER V8.05a   WAVPLAYER                                                            04/26/2012 15:48:22 PAGE 1   
+
+
+C51 COMPILER V8.05a, COMPILATION OF MODULE WAVPLAYER
+OBJECT MODULE PLACED IN wavplayer.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE wavplayer.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include <12c56.H>
+   2          
+   3          #define uint8 unsigned char 
+   4          #define uint16 unsigned int
+   5          #define uint32 unsigned long
+   6          
+   7          sbit SDCS = P1^4;
+   8          sbit LAST = P3^3;
+   9          sbit NEXT = P3^4;
+  10          sbit STOP = P2^5;
+  11          
+  12          uint32 played;
+  13          
+  14          volatile uint32 start_offset;
+  15          
+  16          volatile uint16 tptr=0,bdat=0;
+  17          
+  18          //      ²¥·Å    ²å¿¨ ÇúÄ¿        Á¢ÌåÉù
+  19          bit PLAY=0, CK=1  ,QM=0, STEREO=1;
+  20          
+  21          xdata uint8 buf0[512];
+  22          
+  23          void delay(uint16 dly)
+  24          {
+  25   1              uint16 i;
+  26   1              uint8  j;
+  27   1      
+  28   1              for(i=0;i<dly;i++)
+  29   1                      for(j=0;j<10;j++)
+  30   1                              ;
+  31   1      }
+  32          
+  33          
+  34          void T1ISR() interrupt 3
+  35          {
+  36   1              static uint8 x=0;
+  37   1      
+  38   1              if(!PLAY)
+  39   1              {
+  40   2                      x++;
+  41   2                      if(x==4)x=0;
+  42   2              
+  43   2                      if(!x)
+  44   2                      {
+  45   3                              if(CK)
+  46   3                              {
+  47   4                                      if(tptr==1920)
+  48   4                                      {
+  49   5                                              tptr=0;
+  50   5                                              TR1=0;
+  51   5                                      }
+  52   4                                      else
+  53   4                                              tptr++;
+  54   4                              }
+  55   3                              else if(QM)
+C51 COMPILER V8.05a   WAVPLAYER                                                            04/26/2012 15:48:22 PAGE 2   
+
+  56   3                              {
+  57   4                                      if(tptr==1376)
+  58   4                                      {
+  59   5                                              tptr=0;
+  60   5                                              TR1=0;
+  61   5                                      }
+  62   4                                      else
+  63   4                                              tptr++;
+  64   4                              }
+  65   3                              else
+  66   3                              {
+  67   4                                      ISP_ADDRH=(tptr>>8)&0xFF;
+  68   4                                      ISP_ADDRL=(tptr   )&0xFF;
+  69   4                              
+  70   4                                      ISP_CONTR=0x80;
+  71   4                                      ISP_CMD=1;
+  72   4                                      ISP_TRIG=0x46;
+  73   4                                      ISP_TRIG=0xB9;
+  74   4                              
+  75   4                                      tptr++;
+  76   4                      
+  77   4                                      if(tptr==0x0480)TR1=0;  //ÈÝÁ¿
+  78   4                                      if(tptr==0x0780)TR1=0;  //0
+  79   4                                      if(tptr==0x0a80)TR1=0;  //1
+  80   4                                      if(tptr==0x0d80)TR1=0;  //2
+  81   4                                      if(tptr==0x1080)TR1=0;  //3
+  82   4                                      if(tptr==0x1380)TR1=0;  //4
+  83   4                                      if(tptr==0x1680)TR1=0;  //5
+  84   4                                      if(tptr==0x1980)TR1=0;  //6
+  85   4                                      if(tptr==0x1c80)TR1=0;  //7
+  86   4                                      if(tptr==0x1f80)TR1=0;  //8
+  87   4                                      if(tptr==0x2280)TR1=0;  //9
+  88   4                                      if(tptr==0x2580)TR1=0;  //Ç§
+  89   4                                      if(tptr==0x2880)TR1=0;  //°Ù
+  90   4                                      if(tptr==0x2b80)TR1=0;  //Ê®
+  91   4                                      if(tptr==0x2e80)TR1=0;  //Õ×
+  92   4                              }
+  93   3                      }
+  94   2                      else
+  95   2                      {
+  96   3                        ;
+  97   3                      }
+  98   2              }
+  99   1              else
+ 100   1              {
+ 101   2                      CCAP0H=buf0[tptr++];
+ 102   2                      bdat--;
+ 103   2                      if(STEREO)
+ 104   2                      {
+ 105   3                              CCAP1H=buf0[tptr++];
+ 106   3                              bdat--;
+ 107   3                      }
+ 108   2                      else
+ 109   2                      {
+ 110   3                              CCAP1H=CCAP0H;
+ 111   3                      }
+ 112   2                      if(tptr>=512)
+ 113   2                      {
+ 114   3                              tptr=0;
+ 115   3                      }
+ 116   2              }
+ 117   1      }
+C51 COMPILER V8.05a   WAVPLAYER                                                            04/26/2012 15:48:22 PAGE 3   
+
+ 118          
+ 119          void SPI_INIT()
+ 120          {
+ 121   1              SPCTL=0xd0;
+ 122   1      }
+ 123          
+ 124          void SPI_INIT_LOW()
+ 125          {
+ 126   1              SPCTL=0xd1;
+ 127   1      }
+ 128          
+ 129          uint8  SPI_COMM(uint8 dat)
+ 130          {
+ 131   1              SDCS=0;
+ 132   1              SPDAT=dat;
+ 133   1              while((SPSTAT&0x80)==0);
+ 134   1              SPSTAT=0x80;
+ 135   1              SDCS=1;
+ 136   1              return(SPDAT);
+ 137   1      }
+ 138          
+ 139          uint8 SD_SendCommand(uint8 cmd, uint32 arg)
+ 140          {
+ 141   1              uint8 r1;
+ 142   1              uint8 retry=0;
+ 143   1              
+ 144   1              SPI_COMM(0xff);
+ 145   1              SDCS=0;
+ 146   1              
+ 147   1              SPI_COMM(cmd | 0x40);//·Ö±ðÐ´ÈëÃüÁî     //send command
+ 148   1              SPI_COMM(arg>>24);
+ 149   1              SPI_COMM(arg>>16);
+ 150   1              SPI_COMM(arg>>8);
+ 151   1              SPI_COMM(arg);
+ 152   1              SPI_COMM(0x95);
+ 153   1              
+ 154   1              while((r1 = SPI_COMM(0xff)) == 0xff)//µÈ´ýÏìÓ¦£¬        //wait response
+ 155   1                      if(retry++ > 20) break;//³¬Ê±ÍË³ö                                       //time out error
+ 156   1      
+ 157   1              SDCS=1;
+ 158   1      
+ 159   1              return r1;//·µ»Ø×´Ì¬Öµ                                  //return state
+ 160   1      }
+ 161          
+ 162          uint8  InitSD()
+ 163          {
+ 164   1              uint8 tmp,ret;
+ 165   1              
+ 166   1              for(tmp=0;tmp<0x0f;tmp++)
+ 167   1                      SPI_COMM(0xff);
+ 168   1              
+ 169   1              SDCS=0;
+ 170   1              SPI_COMM(0x40);
+ 171   1              SPI_COMM(0x00);
+ 172   1              SPI_COMM(0x00);
+ 173   1              SPI_COMM(0x00);
+ 174   1              SPI_COMM(0x00);
+ 175   1              SPI_COMM(0x95);
+ 176   1              
+ 177   1              for(tmp=0;tmp<0x7f;tmp++)
+ 178   1              {
+ 179   2                      ret=SPI_COMM(0xff);
+C51 COMPILER V8.05a   WAVPLAYER                                                            04/26/2012 15:48:22 PAGE 4   
+
+ 180   2                      
+ 181   2                      if(ret==0x01)
+ 182   2                      {                       
+ 183   3                              uint8 retry=0,r1;
+ 184   3                              
+ 185   3                              do
+ 186   3                              {
+ 187   4                                      r1 = SD_SendCommand(1, 0);//·¢activeÃüÁî        //send active command
+ 188   4                                      retry++;
+ 189   4                                      if(retry>100) return 1;//³¬Ê±ÍË³ö               //time out
+ 190   4                              } while(r1);
+ 191   3                              
+ 192   3                              //SPI_High();
+ 193   3                              r1 = SD_SendCommand(59, 0);//¹Øcrc              //disable CRC
+ 194   3      
+ 195   3                              r1 = SD_SendCommand(16, 512);//ÉèÉÈÇø´óÐ¡512    //set sector size to 512
+ 196   3                      
+ 197   3                              return 0;
+ 198   3                      }
+ 199   2              }
+ 200   1              
+ 201   1              SDCS=1;
+ 202   1              return 1;
+ 203   1      }
+ 204          
+ 205          //¶ÁÒ»¸öÉÈÇø            //read one sector
+ 206          uint8 SD_ReadSector(uint32 sector, uint8* buffer)
+ 207          {
+ 208   1              uint8 r1;
+ 209   1              uint16 i;
+ 210   1              uint16 retry=0;
+ 211   1      
+ 212   1              r1 = SD_SendCommand(17, (start_offset+sector)<<9);//¶ÁÃüÁî      //read command
+ 213   1              
+ 214   1              if(r1 != 0x00)
+ 215   1                      return r1;
+ 216   1      
+ 217   1              SDCS=0;
+ 218   1              
+ 219   1              //µÈÊý¾ÝµÄ¿ªÊ¼  //wait to start recieve data
+ 220   1              while(SPI_COMM(0xff) != 0xfe)
+ 221   1                      if(retry++ > 1000)
+ 222   1                      {
+ 223   2                              SDCS=1;
+ 224   2                              return 1;
+ 225   2                      }
+ 226   1      
+ 227   1              for(i=0; i<512; i++)//¶Á512¸öÊý¾Ý
+ 228   1              {
+ 229   2                      bdat++;
+ 230   2                      while(bdat>=512);
+ 231   2                      *buffer++ = SPI_COMM(0xff);
+ 232   2              }
+ 233   1      
+ 234   1      
+ 235   1              SPI_COMM(0xff);//Î±crc
+ 236   1              SPI_COMM(0xff);
+ 237   1              
+ 238   1              SDCS=1;
+ 239   1      
+ 240   1              return 0;
+ 241   1      }
+C51 COMPILER V8.05a   WAVPLAYER                                                            04/26/2012 15:48:22 PAGE 5   
+
+ 242          
+ 243          
+ 244          void TIMER0_INIT()
+ 245          {
+ 246   1              TMOD=0x22;                      
+ 247   1              TH0=TL0=0xFF;
+ 248   1              TR0=1;
+ 249   1              ET0=0;
+ 250   1      }
+ 251          
+ 252          void TIMER1_INIT(uint16 hz)
+ 253          {
+ 254   1              if(hz>=8000)
+ 255   1              {
+ 256   2                      CLK_DIV=0x00;
+ 257   2                      TH1=TL1=(uint8)(256-((uint32)1040000/hz));//0x7e;
+ 258   2              }
+ 259   1              else
+ 260   1              {
+ 261   2                      CLK_DIV=0x02;
+ 262   2                      TH1=TL1=(uint8)(256-((uint32)260000/hz));//0x7e;
+ 263   2              }
+ 264   1              TR1=0;
+ 265   1              EA=1;
+ 266   1              ET1=1;
+ 267   1      }
+ 268          
+ 269          void CCP_INIT()
+ 270          {
+ 271   1              AUXR|=0x80;
+ 272   1              CMOD=0x04;
+ 273   1              CL=0x00;
+ 274   1              CH=0x00;
+ 275   1              CCAP0L=0x80;
+ 276   1              CCAP0H=0x80;
+ 277   1              CCAPM0=0x42;
+ 278   1              CCAP1L=0x80;
+ 279   1              CCAP1H=0x80;
+ 280   1              CCAPM1=0x42;
+ 281   1              CR=1;
+ 282   1      }
+ 283          
+ 284          
+ 285          void main()//Ö÷º¯Êý
+ 286          {
+ 287   1              uint8 i=0;
+ 288   1              uint32 ptr;
+ 289   1      
+ 290   1              uint8  FATs;
+ 291   1              uint16 BytesPerSector;
+ 292   1              uint8  SectorsPerClust;
+ 293   1              uint8  FirstFATSector;
+ 294   1              uint16 RootDirCount;
+ 295   1              uint16 RootDirSectors;
+ 296   1              uint16 FirstDirSector;
+ 297   1              uint16 FirstDataSector;
+ 298   1      
+ 299   1              uint32 samps;
+ 300   1              uint8  sbits;
+ 301   1              uint32 filelen;
+ 302   1      
+ 303   1              uint16 sPtr=0,iPtr=0;
+C51 COMPILER V8.05a   WAVPLAYER                                                            04/26/2012 15:48:22 PAGE 6   
+
+ 304   1              uint8  currTrack=0,Track=1;
+ 305   1      
+ 306   1              //------ 3.3V I/O¿ÚÅäÖÃ -------
+ 307   1              P1M0=P1M1=0xf0; //P1.7-P1.4¿ªÂ©
+ 308   1              //-----------------------------
+ 309   1      
+ 310   1              TIMER0_INIT();
+ 311   1              CCP_INIT();
+ 312   1              IT0=1;
+ 313   1              EX0=1;
+ 314   1      
+ 315   1      
+ 316   1      RESTART:
+ 317   1      
+ 318   1              Track=0;
+ 319   1      
+ 320   1              TR1=0;
+ 321   1      
+ 322   1              CK=1;
+ 323   1              tptr=0;
+ 324   1              PLAY=0;
+ 325   1              
+ 326   1      
+ 327   1              TIMER1_INIT(8000);
+ 328   1      
+ 329   1              TR1=1;
+ 330   1      
+ 331   1              while(TR1);
+ 332   1      
+ 333   1              CK=0;
+ 334   1      
+ 335   1              SPI_INIT_LOW();
+ 336   1      
+ 337   1              while(1)
+ 338   1              {
+ 339   2                      if(!InitSD())break;
+ 340   2              }
+ 341   1      
+ 342   1              SPI_INIT();
+ 343   1      
+ 344   1              delay(1000);
+ 345   1      
+ 346   1      
+ 347   1              tptr=0;
+ 348   1              TR1=1;
+ 349   1      
+ 350   1              while(TR1);
+ 351   1      
+ 352   1              TR1=1;
+ 353   1              while(TR1);
+ 354   1              delay(5000);
+ 355   1              goto read;
+ 356   1      
+ 357   1      LASTTRACK:
+ 358   1              TR1=0;
+ 359   1              PLAY=0;
+ 360   1              start_offset=0;
+ 361   1              currTrack=0;
+ 362   1              Track--;
+ 363   1              goto read;
+ 364   1      
+ 365   1      NEXTTRACK:
+C51 COMPILER V8.05a   WAVPLAYER                                                            04/26/2012 15:48:22 PAGE 7   
+
+ 366   1              TR1=0;
+ 367   1              PLAY=0;
+ 368   1              start_offset=0;
+ 369   1              currTrack=0;
+ 370   1              Track++;
+ 371   1      
+ 372   1      read:
+ 373   1              while(1)
+ 374   1              {
+ 375   2                      //FAT16ÎÄ¼þÏµÍ³´¦Àí
+ 376   2      
+ 377   2                      //ÅÐ¶ÏÒýµ¼ÉÈÇøÓÐÐ§ÐÔ
+ 378   2              bdat=65535;
+ 379   2                      if(!SD_ReadSector(0,buf0))
+ 380   2                      {
+ 381   3                              if((buf0[0]!=0xeb)||(buf0[1]!=0x3c)||(buf0[2]!=0x90))   //Èç¹û²»ÊÇEB 3C 90ËµÃ÷ÓÐ·ÖÇø±í£¬¼ÌÐø¶ÁÈ¡Ö®£¬·ñÔòÖ
+             -±½Ó¿ªÊ¼²¥·Å
+ 382   3                              {
+ 383   4                                      start_offset=(buf0[0x01c6]<<0)|(buf0[0x01c7]<<8)|(buf0[0x01c8]<<16)|(buf0[0x01c9]<<24);
+ 384   4              bdat=65535;
+ 385   4                                      SD_ReadSector(0,buf0);
+ 386   4                              }
+ 387   3                              if((buf0[510]==0x55)&&(buf0[511]==0xaa))
+ 388   3                              {
+ 389   4                                      ;
+ 390   4                              }
+ 391   3                              else
+ 392   3                              {
+ 393   4                                      goto RESTART;
+ 394   4                              }
+ 395   3                      }
+ 396   2                      else
+ 397   2                      {
+ 398   3                              goto RESTART;
+ 399   3                      }
+ 400   2      
+ 401   2                      //¶ÁFAT±íÐÅÏ¢
+ 402   2                      FATs=buf0[0x10];
+ 403   2                      BytesPerSector=buf0[0x0B]|(buf0[0x0C]<<8);
+ 404   2                      SectorsPerClust=buf0[0x0D];
+ 405   2                      FirstFATSector=buf0[0x0E];
+ 406   2                      RootDirCount=buf0[0x11]|(buf0[0x12]<<8);
+ 407   2                      RootDirSectors  = (RootDirCount>>4);//¸ùÄ¿Â¼Õ¼ÓÃµÄÉÈÇøÊý
+ 408   2                      FirstDirSector=FirstFATSector+FATs*(buf0[0x16]|(buf0[0x17]<<8));
+ 409   2                      FirstDataSector = FirstDirSector+RootDirSectors;//µÚÒ»¸öÊý¾ÝÉÈÇø
+ 410   2                      //ËÑË÷WAVÎÄ¼þ                   
+ 411   2                                      for(sPtr=0;sPtr<RootDirSectors;sPtr++)
+ 412   2                                      {
+ 413   3                                              bdat=65535;     //-1(ÔÊÐí¶Á¿¨Ò»´Î¶ÁÍê512×Ö½Ú)
+ 414   3                                              SD_ReadSector(FirstDirSector+sPtr,buf0);
+ 415   3      
+ 416   3                                              for(iPtr=0;iPtr<512;iPtr+=32)
+ 417   3                                              {
+ 418   4                                                      if((buf0[iPtr]!='.')&&(buf0[iPtr]!=0x00)&&(buf0[iPtr]!=0xe5) & (buf0[iPtr+0x0B]!=0x0f))
+ 419   4                                                              if((buf0[iPtr+0x08]=='W')&&(buf0[iPtr+0x09]=='A')&&(buf0[iPtr+0x0a]=='V'))
+ 420   4                                                              {
+ 421   5                                                                      ptr=(uint32)FirstDataSector+(uint32)SectorsPerClust*((buf0[iPtr+0x1A]|(buf0[iPtr+0x1B]<<8))-2);
+ 422   5                                                                      filelen=(((uint32)buf0[iPtr+0x1c]|(((uint32)buf0[iPtr+0x1d])<<8)|(((uint32)buf0[iPtr+0x1e])<<16)|(
+             -(uint32)(buf0[iPtr+0x1f])<<24))/512)-2;
+ 423   5                                                                      currTrack++;
+ 424   5                                                                      if(currTrack==Track)break;
+ 425   5                                                              }
+C51 COMPILER V8.05a   WAVPLAYER                                                            04/26/2012 15:48:22 PAGE 8   
+
+ 426   4                                              }
+ 427   3                                              if(currTrack==Track)break;
+ 428   3                                      }
+ 429   2                              
+ 430   2                              
+ 431   2                              if(currTrack!=Track)
+ 432   2                              {
+ 433   3                                      Track=0;
+ 434   3                                      goto NEXTTRACK;
+ 435   3                              }
+ 436   2                              
+ 437   2                              bdat=65535;
+ 438   2                              SD_ReadSector(ptr++,buf0);      
+ 439   2      
+ 440   2                              samps=(buf0[0x18]|(buf0[0x19]<<8)|(buf0[0x1A]<<16)|(buf0[0x1B]<<24));
+ 441   2                              sbits=buf0[0x22];
+ 442   2      
+ 443   2                              if(buf0[0x16]==2)
+ 444   2                                      STEREO=1;
+ 445   2                              else
+ 446   2                                      STEREO=0;
+ 447   2      
+ 448   2      
+ 449   2                              if(sbits!=8)
+ 450   2                              {
+ 451   3                              goto NEXTTRACK;
+ 452   3                               }
+ 453   2      
+ 454   2      
+ 455   2                              if(samps>48000)
+ 456   2                              {
+ 457   3                                      goto NEXTTRACK;
+ 458   3                              }
+ 459   2      
+ 460   2      
+ 461   2              TIMER1_INIT(8000);
+ 462   2              QM=1;
+ 463   2              tptr=0;
+ 464   2              TR1=1;
+ 465   2              while(TR1);
+ 466   2              QM=0;
+ 467   2      
+ 468   2              TIMER1_INIT(samps/2);//(24000);
+ 469   2      
+ 470   2              bdat=65535;
+ 471   2      
+ 472   2              SD_ReadSector(ptr++,buf0);
+ 473   2      
+ 474   2              tptr=0;
+ 475   2              played=0;
+ 476   2      
+ 477   2              PLAY=1;
+ 478   2              TR1=1;
+ 479   2      
+ 480   2              while(1)
+ 481   2              {
+ 482   3                      
+ 483   3                      if(SD_ReadSector(ptr++,buf0))goto RESTART;
+ 484   3                      if(!LAST)goto LASTTRACK;
+ 485   3                      if(!NEXT)goto NEXTTRACK;
+ 486   3                      if(!STOP)PCON=PCON^0xfe;
+ 487   3                      if((played++)>filelen)goto NEXTTRACK;
+C51 COMPILER V8.05a   WAVPLAYER                                                            04/26/2012 15:48:22 PAGE 9   
+
+ 488   3              
+ 489   3              }
+ 490   2      
+ 491   2      
+ 492   2      
+ 493   2              }
+ 494   1      } 
+ 495          
+ 496          void exint0() interrupt 0
+ 497          {       
+ 498   1            ;
+ 499   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2116    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =    512    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     13      45
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      4    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

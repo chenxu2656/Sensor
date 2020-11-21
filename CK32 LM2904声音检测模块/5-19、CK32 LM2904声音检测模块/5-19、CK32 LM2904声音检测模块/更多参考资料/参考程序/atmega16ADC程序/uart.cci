@@ -1,0 +1,11 @@
+VERSION:3 SOURCE_TIMESTAMP:4458B729
+NODE:I LEVEL:0 LINE:1 "c:\cvavr2\inc\mega16.h"
+NODE:I LEVEL:0 LINE:2 "c:\cvavr2\inc\string.h"
+NODE:I LEVEL:0 LINE:3 "K:\工作室\模块设计\声音模块\projcet file\source\AD采样\uart.h"
+NODE:I LEVEL:0 LINE:4 "K:\工作室\模块设计\声音模块\projcet file\source\AD采样\myfun.h"
+NODE:F LEVEL:0 LINE:12 "UART_Init(void)"
+NODE:F LEVEL:0 LINE:29 "UART_Send_Byte(unsigned char mydata)"
+NODE:F LEVEL:0 LINE:45 "UART_Send_Enter(void)"
+NODE:F LEVEL:0 LINE:59 "UART_Send_Str(unsigned char * s)"
+NODE:F LEVEL:0 LINE:84 "UART_Put_Num(unsigned long dat)"
+NODE:F LEVEL:0 LINE:100 "UART_Put_Inf(unsigned char * inf,unsigned long dat)"

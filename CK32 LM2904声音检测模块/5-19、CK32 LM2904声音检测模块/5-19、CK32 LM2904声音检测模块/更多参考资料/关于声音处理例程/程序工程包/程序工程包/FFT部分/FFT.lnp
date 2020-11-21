@@ -1,0 +1,4 @@
+"STARTUP.obj",
+"FFT.obj" 
+TO "FFT" 
+RAMSIZE(256) 

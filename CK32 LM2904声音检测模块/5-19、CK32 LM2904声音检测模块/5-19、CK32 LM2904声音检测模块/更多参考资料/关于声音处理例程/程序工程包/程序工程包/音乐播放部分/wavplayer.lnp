@@ -1,0 +1,4 @@
+"STARTUP.obj",
+"wavplayer.obj" 
+TO "wavplayer" 
+RAMSIZE(256) 

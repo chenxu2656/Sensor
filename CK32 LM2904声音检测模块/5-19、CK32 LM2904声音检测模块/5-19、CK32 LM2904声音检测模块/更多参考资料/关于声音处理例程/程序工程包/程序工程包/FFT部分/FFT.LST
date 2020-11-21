@@ -1,0 +1,264 @@
+C51 COMPILER V8.05a   FFT                                                                  04/25/2012 22:13:18 PAGE 1   
+
+
+C51 COMPILER V8.05a, COMPILATION OF MODULE FFT
+OBJECT MODULE PLACED IN FFT.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE FFT.C BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include<STC12C5A60S2.H>
+   2          typedef unsigned char uint8;
+   3          typedef unsigned int  uint16; 
+   4          #define  channel  0x01                    //ÉèÖÃADÍ¨µÀÎª P1.0
+   5          #define ADC_POWER   (1<<7) 
+   6          #define ADC_SPEEDHH (0x03<<5) 
+   7          #define ADC_START   (1<<3) 
+   8          #define PADCH       (1<<5) 
+   9          #define ADC_FLAG    (1<<4)
+  10          #define P_3 P3 //32ÁÐÉ¨Ãè¿ØÖÆ
+  11          sbit sw=P1^2;//74HC154×éÇÐ»»¿ØÖÆÎ»
+  12          //·Å´ó128±¶ºóµÄsinÕûÊý±í£¨128£© 
+  13          code char SIN_TAB[128]={0,6,12,18,24,30,36,42,48,54,59,65,70,75,80,85,89,94,98,102, 
+  14                                  105,108,112,114,117,119,121,123,124,125,126,126,126,126,126,
+  15                                                          125,124,123,121,119,117,114,112,108,105,102,98,94,89,85,80,75,
+  16                                                          70,65,59,54,48,42,36,30,24,18,12,6,0,-6,-12,-18,-24,-30,-36,-42,
+  17                                                          -48,-54,-59,-65,-70,-75,-80,-85,-89,-94,-98,-102,-105,-108,-112,
+  18                                                          -114,-117,-119,-121,-123,-124,-125,-126,-126,-126,-126,-126,-125,
+  19                                                          -124,-123,-121,-119,-117,-114,-112,-108,-105,-102,-98,-94,-89,-85,
+  20                                                          -80,-75,-70,-65,-59,-54,-48,-42,-36,-30,-24,-18,-12,-6};
+  21          
+  22          //·Å´ó128±¶ºóµÄcosÕûÊý±í£¨128£©
+  23          code char COS_TAB[128]={127,126,126,125,124,123,121,119,117,114,112,108,105,102,98,94, 
+  24                                  89,85,80,75,70,65,59,54,48,42,36,30,24,18,12,6,0,-6,-12,-18,-24,
+  25                                                          -30,-36,-42,-48,-54,-59,-65,-70,-75,-80,-85,-89,-94,-98,-102,
+  26                                                          -105,-108,-112,-114,-117,-119,-121,-123,-124,-125,-126,-126,-126,
+  27                                                          -126,-126,-125,-124,-123,-121,-119,-117,-114,-112,-108,-105,-102,
+  28                                                          -98,-94,-89,-85,-80,-75,-70,-65,-59,-54,-48,-42,-36,-30,-24,-18,
+  29                                                          -12,-6,0,6,12,18,24,30,36,42,48,54,59,65,70,75,80,85,89,94,98,102,
+  30                                                          105,108,112,114,117,119,121,123,124,125,126,126};
+  31          
+  32          //²ÉÑù´æ´¢ÐòÁÐ±í
+  33          code char LIST_TAB[128] = {0,64,32,96,16,80,48,112,8,72,40,104,24,88,56,120,4,68,36,100,20,84,52,116,
+  34                                     12,76,44,108,28,92,60,124,2,66,34,98,18,82,50,114,10,74,42,106,26,90,58,
+  35                                                             122,6,70,38,102,22,86,54,118,14,78,46,110,30,94,62,126,1,65,33,97,17,81,49,
+  36                                                             113,9,73,41,105,25,89,57,121,5,69,37,101,21,85,53,117,13,77,45,109,29,93,61,
+  37                                                             125,3,67,35,99,19,83,51,115,11,75,43,107,27,91,59,123,7,71,39,103,23,87,55,
+  38                                                             119,15,79,47,111,31,95,63,127};
+  39          
+  40          uint8 LED[32]={0x80,0x00,0xC0,0x00,0xE0,0x00,0xF0,0x00,
+  41                         0xF8,0x00,0xFC,0x00,0xFE,0x00,0xFF,0x00,
+  42                         0xff,0x80,0xff,0xC0,0xff,0xE0,0xff,0xF0,
+  43                                     0xff,0xF8,0xff,0xFC,0xff,0xFE,0xff,0xFF,};
+  44          uint8 COUNT=15,COUNT1=0,ADC_Count=0,LINE=15,G=0,T;
+  45          uint8 i,j,k,b,p,anum,led=0;                 
+  46          int Temp_Real,Temp_Imag,temp;                // ÖÐ¼äÁÙÊ±±äÁ¿  
+  47          uint16 TEMP1,max=0;     
+  48          int xdata Fft_Real[128]; 
+  49          int xdata Fft_Image[128];               // fftµÄÐé²¿ 
+  50          uint8 xdata LED_TAB2[16];                               //¼ÇÂ¼ Æ¯¸¡Îï ÊÇ·ñÐèÒª Í£¶ÙÒ»ÏÂ
+  51          uint8 xdata LED_TAB[16];                                //¼ÇÂ¼ºìÉ«Öù×´ 
+  52          uint8 xdata LED_TAB1[16];                               //¼ÇÂ¼ Æ¯¸¡µã
+  53          /////////////shop60610364.taobao.com/////////
+  54          void FFT()//»ù2fft
+  55          {                 
+C51 COMPILER V8.05a   FFT                                                                  04/25/2012 22:13:18 PAGE 2   
+
+  56   1          for( i=1; i<=7; i++)                            /* for(1) */
+  57   1          { 
+  58   2              b=1;
+  59   2              b <<=(i-1);                                 //µúÊ½ÔËËã£¬ÓÃÓÚ¼ÆËã¸ô¶àÉÙÐÐ¼ÆËãÀýÈç µÚÒ»¼« 1ºÍ2ÐÐ¼ÆËã
+  60   2              for( j=0; j<=b-1; j++)                      /* for (2) */
+  61   2              { 
+  62   3                  p=1;
+  63   3                  p <<= (7-i);            
+  64   3                  p = p*j;
+  65   3                  for( k=j; k<128; k=k+2*b)               /* for (3)  */
+  66   3                  { 
+  67   4                      Temp_Real=Fft_Real[k];
+  68   4                                      Temp_Imag=Fft_Image[k];
+  69   4                                      temp=Fft_Real[k+b];
+  70   4                      Fft_Real[k]=Fft_Real[k]+((Fft_Real[k+b]*COS_TAB[p])>>7)+((Fft_Image[k+b]*SIN_TAB[p])>>7);
+  71   4                      Fft_Image[k]=Fft_Image[k]-((Fft_Real[k+b]*SIN_TAB[p])>>7)+((Fft_Image[k+b]*COS_TAB[p])>>7)
+             -;
+  72   4                      Fft_Real[k+b]=Temp_Real-((Fft_Real[k+b]*COS_TAB[p])>>7)-((Fft_Image[k+b]*SIN_TAB[p])>>7);
+  73   4                      Fft_Image[k+b]=Temp_Imag+((temp*SIN_TAB[p])>>7)-((Fft_Image[k+b]*COS_TAB[p])>>7);         
+             - // ÒÆÎ».·ÀÖ¹Òç³ö. ½á¹ûÒÑ¾­ÊÇ±¾ÖµµÄ 1/64               
+  74   4                      Fft_Real[k] >>= 1;             
+  75   4                      Fft_Image[k] >>= 1; 
+  76   4                      Fft_Real[k+b] >>= 1;                 
+  77   4                      Fft_Image[k+b] >>= 1; 
+  78   4                                                                                     
+  79   4                  }     
+  80   3              } 
+  81   2          } 
+  82   1      
+  83   1              for(j=0;j<16;j++)//16·ÖÆµ                                                                                        
+  84   1              {                                                                                                                                                         
+  85   2                      TEMP1=((((Fft_Real[j+1]* Fft_Real[j+1]))+((Fft_Image[j+1]*Fft_Image[j+1])))>>1);//Çó¸÷Æµ¶Î·ùÖµ
+  86   2                      if(TEMP1<1)TEMP1=0; 
+  87   2                      LED_TAB[j]=TEMP1;       
+  88   2                      if(LED_TAB[j]>max)max=LED_TAB[j];
+  89   2              }
+  90   1              if(max>16)//·Ö¼¶Á¿»¯
+  91   1              {
+  92   2                max/=16;
+  93   2                for(j=0;j<16;j++)LED_TAB[j]/=max;
+  94   2              }       
+  95   1      }
+  96          
+  97          
+  98          void delay2us(void)   //2usÑÓÊ±
+  99          {
+ 100   1          unsigned char a,b;
+ 101   1          for(b=1;b>0;b--)
+ 102   1              for(a=3;a>0;a--);
+ 103   1      }
+ 104          
+ 105          
+ 106          
+ 107          void Init()
+ 108          {  
+ 109   1              
+ 110   1      //-----------------------------------------------------------------------------------
+ 111   1      
+ 112   1           P1ASF = 0x02;                 //0000,0010, ½« P1.1 ÖÃ³ÉÄ£Äâ¿Ú
+ 113   1           AUXR1 &=0xFB;                 //1111,1011, Áî ADRJ=0
+ 114   1               EADC=1;                                           //ADÖÐ¶Ï´ò¿ª
+ 115   1               ADC_CONTR = ADC_POWER | ADC_SPEEDHH | ADC_START | channel;//1110 1001   1´ò¿ª A/D £¨ADC_POWER£©×ª»»µçÔ´£
+C51 COMPILER V8.05a   FFT                                                                  04/25/2012 22:13:18 PAGE 3   
+
+             -»11ËÙ¶ÈÎª90ÖÜÆÚÒ»´Î£»
+ 116   1                                                                             //0ÖÐ¶Ï±êÖ¾ÇåÁã£»1Æô¶¯adc(ADC_START);001ADÍ¨µÀ´ò¿ª£¨
+             -ÕâÀïÎªP1.1£©;
+ 117   1      //-----------------------------------------------------------------------------------
+ 118   1               
+ 119   1               P2M0=1;
+ 120   1           TMOD=0X12;                                    
+ 121   1               TH0=0xb0;                                                                
+ 122   1               TL0=0xb0;
+ 123   1               TH1=0xfe;                                                                                                 
+ 124   1               TL1=0Xd4;
+ 125   1               ET0=1;                                        //¶¨Ê±Æ÷0 ´ò¿ª
+ 126   1               TR0=0;                                            //¹Ø±Õ¶¨Ê±Æ÷
+ 127   1               ET1=1;
+ 128   1               TR1=1;
+ 129   1               PT1=0;
+ 130   1               PT0=1;
+ 131   1           IPH=PADCH;
+ 132   1               IP=PADC;                                          //ÖÐ¶ÏÓÅÏÈ¼¶
+ 133   1               EA=1;                                             //×ÜÖÐ¶Ï´ò¿ª 
+ 134   1      }
+ 135          
+ 136          //----------------------------------------------------------------------------------------
+ 137           
+ 138           void ADC_Finish() interrupt 5
+ 139           {         ADC_CONTR &= !ADC_FLAG; 
+ 140   1                 Fft_Real[LIST_TAB[ADC_Count]]=(int)((ADC_RES)<<1)+(ADC_RESL>>1)*2;//°´LIST_TAB±íÀïµÄË³Ðò£¬½øÐÐ´æ´¢²ÉÑ
+             -ùÖµ
+ 141   1                if(ADC_Count<=127)ADC_Count++;
+ 142   1                else {EADC=0;TR0=0;}                                                                                                           
+ 143   1       }
+ 144          //---------------------------------------------------------------------------------------
+ 145           void LED_Display() interrupt 3                                  //ÖÐ¶ÏÒ»´ÎÏÔÊ¾Ò»ÁÐ
+ 146           {               
+ 147   1              TH1=0xfe;                                                                                                
+ 148   1              TL1=0Xd4;                                               
+ 149   1          G++;                                                        
+ 150   1          if(G==33)G=1;
+ 151   1              switch(G)                                                                    //ÍùµãÕóÆÁÌî³äÒ»ÁÐµÄÊý¾Ý
+ 152   1                {
+ 153   2                      case 1:sw=1;anum=LED_TAB[0];P_3=0x00;break;
+ 154   2                      case 2:anum=LED_TAB[0];P_3=0x01;break;
+ 155   2                      case 3:anum=LED_TAB[1];P_3=0x02;break;
+ 156   2                      case 4:anum=LED_TAB[1];P_3=0x03;break;
+ 157   2                      case 5:anum=LED_TAB[2];P_3=0x04;break;
+ 158   2                      case 6:anum=LED_TAB[2];P_3=0x05;break;
+ 159   2                      case 7:anum=LED_TAB[3];P_3=0x06;break;
+ 160   2                      case 8:anum=LED_TAB[3];P_3=0x07;break;
+ 161   2                      case 9:anum=LED_TAB[4];P_3=0x08;break;
+ 162   2                      case 10:anum=LED_TAB[4];P_3=0x09;break;
+ 163   2                      case 11:anum=LED_TAB[5];P_3=0x0a;break;
+ 164   2                      case 12:anum=LED_TAB[5];P_3=0x0b;break;
+ 165   2                      case 13:anum=LED_TAB[6];P_3=0x0c;break;
+ 166   2                      case 14:anum=LED_TAB[6];P_3=0x0d;break;
+ 167   2                      case 15:anum=LED_TAB[7];P_3=0x0e;break;
+ 168   2                      case 16:anum=LED_TAB[7];P_3=0x0f;break;
+ 169   2                      case 17:sw=0;anum=LED_TAB[8];P_3=0x00;break;
+ 170   2                      case 18:anum=LED_TAB[8];P_3=0x10;break;
+ 171   2                      case 19:anum=LED_TAB[9];P_3=0x20;break;
+ 172   2                      case 20:anum=LED_TAB[9];P_3=0x30;break;
+ 173   2                      case 21:anum=LED_TAB[10];P_3=0x40;break;
+ 174   2                      case 22:anum=LED_TAB[10];P_3=0x50;break;
+C51 COMPILER V8.05a   FFT                                                                  04/25/2012 22:13:18 PAGE 4   
+
+ 175   2                      case 23:anum=LED_TAB[11];P_3=0x60;break;
+ 176   2                      case 24:anum=LED_TAB[11];P_3=0x70;break;
+ 177   2                      case 25:anum=LED_TAB[12];P_3=0x80;break;
+ 178   2                      case 26:anum=LED_TAB[12];P_3=0x90;break;
+ 179   2                      case 27:anum=LED_TAB[13];P_3=0xa0;break;
+ 180   2                      case 28:anum=LED_TAB[13];P_3=0xb0;break;
+ 181   2                      case 29:anum=LED_TAB[14];P_3=0xc0;break;
+ 182   2                      case 30:anum=LED_TAB[14];P_3=0xd0;break;
+ 183   2                      case 31:anum=LED_TAB[15];P_3=0xe0;break;
+ 184   2                      case 32:anum=LED_TAB[15];P_3=0xf0;break;
+ 185   2                          
+ 186   2                      }
+ 187   1      
+ 188   1                 for(led=0;led<=anum;led++)                            //µÝÔö
+ 189   1                   { P0=LED[2*led+1];
+ 190   2                         P2=LED[2*led];
+ 191   2                         delay2us();
+ 192   2                         
+ 193   2                       }                                                                               //µÝ¼õ
+ 194   1                 for(;led>=0;led--)
+ 195   1                   { P0=LED[2*led+1];
+ 196   2                         P2=LED[2*led];
+ 197   2                         delay2us();
+ 198   2                       }
+ 199   1       }
+ 200          //--------------------------------------------------------------------------------------------------------
+             -----
+ 201          
+ 202          void Ad_Control() interrupt 1                                    //¿ØÖÆ²ÉÑùÂÊ
+ 203          {
+ 204   1       ADC_CONTR = ADC_POWER | ADC_SPEEDHH| ADC_START | channel;       //¿ªÊ¼AD²É¼¯
+ 205   1      } 
+ 206                                                                                    
+ 207          //========================================================================================================
+             -=======
+ 208          
+ 209           void main()
+ 210           {
+ 211   1          uint8 i;
+ 212   1              Init();
+ 213   1              while(1)
+ 214   1              {               
+ 215   2                      ADC_Count=0;
+ 216   2                      TR0=1;
+ 217   2                      EADC=1; //¿ªÆô¶¨Ê±Æ÷ÖÐ¶Ï0£¬¿ªÆôADC 
+ 218   2                      while(ADC_Count<128); 
+ 219   2              for(i=0;i<128;i++)
+ 220   2              {
+ 221   3               Fft_Image[i]=0;
+ 222   3              }
+ 223   2                      FFT();//FFTÔËËã²¢×ª»»Îª¸÷Æµ¶Î·ùÖµ                                                  
+ 224   2                       
+ 225   2              }
+ 226   1       }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1784    ----
+   CONSTANT SIZE    =    384    ----
+   XDATA SIZE       =    560    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     55    ----
+C51 COMPILER V8.05a   FFT                                                                  04/25/2012 22:13:18 PAGE 5   
+
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

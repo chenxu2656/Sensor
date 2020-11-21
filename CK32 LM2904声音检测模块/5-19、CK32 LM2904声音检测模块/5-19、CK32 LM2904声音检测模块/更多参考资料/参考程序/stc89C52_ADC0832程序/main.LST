@@ -1,0 +1,258 @@
+C51 COMPILER V8.02   MAIN                                                                  04/25/2014 15:11:52 PAGE 1   
+
+
+C51 COMPILER V8.02, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          /******************************************
+   2          
+   3          功能：驱动AD0832读取模拟电压数值，将AD转换
+   4                    后的数值，使用串口输出。ADC0832的CHO
+   5                    （通道0）是检测电压变化。
+   6                    实现串口输出，串口是单片机程序调试种
+   7                    最常用最重要的工具。在使用前需要主要
+   8                    开发板当前晶振频率是否为11.0592MHz,如
+   9                    不是，请更换晶振，或者自行计算定时器
+  10                    数值。
+  11          MCU:STC89C52
+  12          开发环境：KeilC
+  13          时间：2011-8-23
+  14          ******************************************/
+  15          
+  16          
+  17          //头文件
+  18          #include <reg51.h>
+  19          #include <INTRINS.H>
+  20          
+  21          //宏定义
+  22          #define uchar unsigned char 
+  23          #define uint unsigned int 
+  24          
+  25          //管脚定义
+  26          sbit    ADC0832_CLK = P3^5;
+  27          sbit    ADC0832_DODI =P2^7;
+  28          sbit    ADC0832_CS = P3^4;
+  29          
+  30          //函数声明
+  31          /******************************************/                                    
+  32          void delay(unsigned int time); 
+  33          
+  34          
+  35          /******************************************/
+  36          //延时子函数 
+  37          //参数范围 0-65536
+  38          void delay(unsigned int time)   //参数 time 大小
+  39          {                                                            //决定延时时间长短
+  40   1      
+  41   1              while(time--);
+  42   1      }
+  43          
+  44          //------------------------------------------------ADC0832读取函数-----------------------------------------
+             --------------
+  45          /************************************************************/
+  46          //读取ADC0832转换值函数
+  47          //入口函数：channel选择通道
+  48          uchar ADC0832_Read(uchar channel)
+  49          {
+  50   1              uchar i = 0;    
+  51   1              uchar tmp = 0;  //高字节数据
+  52   1              uchar tmp1 = 0; //低字节数据
+  53   1              
+  54   1              //开始标志位
+C51 COMPILER V8.02   MAIN                                                                  04/25/2014 15:11:52 PAGE 2   
+
+  55   1              ADC0832_DODI = 1;
+  56   1              _nop_();  _nop_();
+  57   1      
+  58   1              ADC0832_CS = 0;         //片选信号      
+  59   1      
+  60   1              ADC0832_CLK = 1;
+  61   1              _nop_();  _nop_();
+  62   1              ADC0832_CLK = 0;
+  63   1              _nop_();  _nop_();
+  64   1      
+  65   1              //选择通道
+  66   1              switch(channel)
+  67   1              {
+  68   2                      case 0:         //通道0
+  69   2                              ADC0832_DODI = 1;       //SGL = 1；
+  70   2                              _nop_();  _nop_();
+  71   2                              ADC0832_CLK = 1;
+  72   2                              _nop_();  _nop_();
+  73   2                              ADC0832_CLK = 0;
+  74   2                              _nop_();  _nop_();
+  75   2      
+  76   2                              ADC0832_DODI = 0;       //ODD = 0;
+  77   2                              _nop_();  _nop_();
+  78   2                              ADC0832_CLK = 1;
+  79   2                              _nop_();  _nop_();
+  80   2                              ADC0832_CLK = 0;
+  81   2                              _nop_();  _nop_();
+  82   2                              break;
+  83   2      
+  84   2                      case 1:         //通道1
+  85   2                              ADC0832_DODI = 1;       //SGL = 1；
+  86   2                              _nop_();  _nop_();
+  87   2                              ADC0832_CLK = 1;
+  88   2                              _nop_();  _nop_();
+  89   2                              ADC0832_CLK = 0;
+  90   2                              _nop_();  _nop_();
+  91   2      
+  92   2                              ADC0832_DODI = 1;       //ODD = 1;
+  93   2                              _nop_();  _nop_();
+  94   2                              ADC0832_CLK = 1;
+  95   2                              _nop_();  _nop_();
+  96   2                              ADC0832_CLK = 0;
+  97   2                              _nop_();  _nop_();
+  98   2                              break;
+  99   2                              
+ 100   2                      default:
+ 101   2                              break;          
+ 102   2              }
+ 103   1      
+ 104   1              ADC0832_DODI = 1;
+ 105   1              _nop_();  _nop_();
+ 106   1      
+ 107   1              //读取8位转换数值
+ 108   1              for(i=0;i<8;i++)
+ 109   1              {
+ 110   2                      ADC0832_CLK = 1;           //产生同步时钟
+ 111   2                      _nop_();  _nop_();
+ 112   2                      ADC0832_CLK = 0;
+ 113   2                      _nop_();  _nop_();
+ 114   2      
+ 115   2                      if(ADC0832_DODI)          //按位获取8位数据
+ 116   2                      {
+C51 COMPILER V8.02   MAIN                                                                  04/25/2014 15:11:52 PAGE 3   
+
+ 117   3                              tmp |= 0x01;      //从低位获取
+ 118   3                      }
+ 119   2                      else
+ 120   2                      {
+ 121   3                              tmp &= 0xfe;
+ 122   3                      }
+ 123   2                      if(i<7)
+ 124   2                      {
+ 125   3                              tmp <<= 1;                //移位
+ 126   3                      }                                       
+ 127   2              }
+ 128   1      
+ 129   1              tmp1 =  tmp & 0x01;
+ 130   1              tmp1 <<= 6;
+ 131   1      
+ 132   1              for(i=0;i<7;i++)                  //获取7位校验数据
+ 133   1              {
+ 134   2                      ADC0832_CLK = 1;
+ 135   2                      _nop_();  _nop_();
+ 136   2                      ADC0832_CLK = 0;
+ 137   2                      _nop_();  _nop_();
+ 138   2      
+ 139   2                      if(ADC0832_DODI)
+ 140   2                      {
+ 141   3                              tmp1 |= 0x80;
+ 142   3                      }
+ 143   2                      else
+ 144   2                      {
+ 145   3                              tmp1 &= 0x7f;
+ 146   3                      }
+ 147   2                      if(i<6)
+ 148   2                      {
+ 149   3                              tmp1 >>= 1;
+ 150   3                      }               
+ 151   2              }
+ 152   1      
+ 153   1              ADC0832_CS = 1;         //禁止ADC0832
+ 154   1      
+ 155   1              if(tmp == tmp1) //当高字节与低字节相同时，该值有效
+ 156   1              {
+ 157   2                      return tmp;     //返回数值
+ 158   2              }
+ 159   1      }
+ 160          
+ 161          
+ 162          //------------------------------------------------串口初始化----------------------------------------------
+             ---------
+ 163          void Uart_Init( void )
+ 164          {                                                       //波特率9600
+ 165   1              TMOD = 0x20;    //定时器T1使用工作方式2
+ 166   1              TL1 = 0xfa;
+ 167   1              TH1 = 0xfa;
+ 168   1              TR1 = 1;        // 开始计时
+ 169   1              SCON = 0x50;    //工作方式1，波特率9600bps @ 11.0592，允许接收
+ 170   1              PCON |= 0x80;
+ 171   1              //ES = 1;
+ 172   1              //EA = 1;               // 打开所有中断
+ 173   1              TI = 0;
+ 174   1              //RI = 0;
+ 175   1              //REN = 1;
+ 176   1      }
+ 177          //------------------------------------------------串口显示------------------------------------------------
+C51 COMPILER V8.02   MAIN                                                                  04/25/2014 15:11:52 PAGE 4   
+
+             -----------
+ 178          void RS_Byte(uchar R_Byte)
+ 179          {       
+ 180   1               SBUF = R_Byte;  
+ 181   1           while(TI == 0);                            //查询法
+ 182   1               TI = 0;
+ 183   1           
+ 184   1      }
+ 185          
+ 186          void RS_String(uchar *p)
+ 187          {
+ 188   1              uchar i = 0;
+ 189   1      
+ 190   1              while(*(p+i) != '\0' )
+ 191   1              {
+ 192   2                      RS_Byte(*(p+i));
+ 193   2                      i++;    
+ 194   2              }
+ 195   1      }
+ 196                                                  
+ 197          /******************************************/
+ 198          //主函数                                
+ 199          void main(void) 
+ 200          {
+ 201   1              uchar AD_Value; 
+ 202   1      
+ 203   1              Uart_Init();
+ 204   1      
+ 205   1              RS_String("Uart Initializing...... \n");
+ 206   1      
+ 207   1              delay(50000);
+ 208   1      
+ 209   1              RS_String("Uart Initializing Finished !! \n");
+ 210   1      
+ 211   1              delay(50000);
+ 212   1      
+ 213   1              while(1)                        //主程序循环    
+ 214   1              {
+ 215   2                      AD_Value = ADC0832_Read(0);
+ 216   2      
+ 217   2                      RS_String("The value of AD is : ");
+ 218   2                      RS_Byte(AD_Value/100 + '0');
+ 219   2                      RS_Byte(AD_Value/10%10 + '0');
+ 220   2                      RS_Byte(AD_Value%10 + '0');
+ 221   2                      RS_Byte('\n');
+ 222   2      
+ 223   2                      delay(50000);
+ 224   2              }
+ 225   1      }
+ 226          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    315    ----
+   CONSTANT SIZE    =     80    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       3
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

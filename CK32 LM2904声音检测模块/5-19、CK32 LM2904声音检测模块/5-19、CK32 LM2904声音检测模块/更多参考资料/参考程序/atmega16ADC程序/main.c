@@ -1,0 +1,53 @@
+/********************************************************************
+                     
+**实现功能:ADC数据采集测试程序，串口输出数据显示 波特率9600 晶振11.0592Mhz  ADC输入口PA7
+**使用芯片：Amega16
+**晶振：11.0592MHZ
+**编译环境：CVAVR2.04.4a
+**【声明】此程序仅用于学习与参考     
+*********************************************************************/
+#include <mega16.h>
+#include <delay.h>
+#include "uart.h"
+
+bit time_2ms_ok;
+unsigned int adc_data,adc_v; 
+void main(void)
+{
+    
+    DDRA = 0xf;
+    PORTA = 0x0f;
+    UART_Init();
+    //T/C0
+    TCCR0 = 0x0B;//64分频，CTC模式
+    TCNT0=00;
+    OCR0 = 0x7C;
+    TIMSK = 0x02; 
+    //ADC
+    ADMUX = 0x47;//外部参考电压源，单端输入ADC7
+    SFIOR &= 0x1F;
+    SFIOR |= 0x60;
+    ADCSRA = 0xAD;//ADC中断允许，自动触发，ADC转换中断允许，
+    #asm("sei")  
+    
+    while(1)  
+    {       
+            delay_ms(500);   
+            UART_Put_Num(adc_v);  
+            UART_Send_Byte(0x20); 
+             delay_ms(500);   
+    }
+}
+
+//ADC中断
+interrupt [ADC_INT] void adc_isr(void)
+{ 
+    adc_data = ADCW;
+    adc_v = (unsigned long)adc_data*5000/1024;
+}
+
+//Timer0比较匹配中断服务
+interrupt [TIM0_COMP] void timer0_comp_isr(void)
+{
+    time_2ms_ok = 1;
+}

@@ -1,0 +1,23 @@
+<html>
+<body>
+<pre>
+<h1>礦ision3 Build Log</h1>
+<h2>Project:</h2>
+F:\桌面文件\频谱时钟\程序工程包\程序工程包\FFT部分\FFT.uv2
+Project File Date:  06/01/2012
+
+<h2>Output:</h2>
+compiling FFT.C...
+FFT.C - 0 Error(s), 0 Warning(s).
+Build target 'Target 1'
+linking...
+Program Size: data=64.0 xdata=528 code=2396
+creating hex file from "FFT"...
+"FFT" - 0 Error(s), 0 Warning(s).
+Build target 'Target 1'
+assembling STARTUP.A51...
+compiling FFT.C...
+linking...
+Program Size: data=64.0 xdata=528 code=2396
+creating hex file from "FFT"...
+"FFT" - 0 Error(s), 0 Warning(s).
